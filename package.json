@@ -1,0 +1,37 @@
+{
+  "name": "campushub-backend",
+  "version": "1.0.0",
+  "description": "CampusHub backend with a baseline health-check endpoint",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env -r ts-node/register src/app.ts",
+    "build": "tsc",
+    "start": "node --env-file-if-exists=.env dist/app.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config src",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.2",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.8",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.70.1"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=24.21.0",
+    "npm": ">=11.19.1"
+  }
+}
