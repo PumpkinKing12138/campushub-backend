@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: CampusHub Reservation API
+  version: 1.0.0
+  description: API for campus resources and time-slotted reservations.
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Development Server
+
+paths:
+  /resources:
+    get:
+      summary: List campus resources
+      operationId: listResources
+      parameters:
+        - name: type
+          in: query
+          required: false
+          description: Filter resources by type.
+          schema:
+            type: string
+            enum: [ROOM, EQUIPMENT, LAB]
+      responses:
+        "200":
+          description: Resources matching the optional type filter.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resource"
+        "400":
+          description: Invalid resource type.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reservations:
+    post:
+      summary: Create a reservation
+      operationId: createReservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Reservation"
+      responses:
+        "201":
+          description: Reservation created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "400":
+          description: Missing or invalid fields, or endTime is not after startTime.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Resource already has an overlapping active reservation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reservations/user/{userId}:
+    get:
+      summary: List active reservations for a user
+      operationId: listUserReservations
+      description: Returns reservations with PENDING or CONFIRMED status.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Active reservations for the user, or an empty array.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reservation"
+        "400":
+          description: Invalid userId.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    Resource:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - type
+        - location
+        - isAvailable
+      properties:
+        id:
+          type: string
+          minLength: 1
+          example: res-101
+        name:
+          type: string
+          minLength: 1
+          example: Study Room 302
+        type:
+          type: string
+          enum: [ROOM, EQUIPMENT, LAB]
+        location:
+          type: string
+          minLength: 1
+          example: Library, Floor 3
+        isAvailable:
+          type: boolean
+          example: true
+
+    Reservation:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - resourceId
+        - userId
+        - startTime
+        - endTime
+        - status
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+          example: booking-001
+        resourceId:
+          type: string
+          minLength: 1
+          example: res-101
+        userId:
+          type: string
+          minLength: 1
+          example: user-456
+        startTime:
+          type: string
+          format: date-time
+          example: "2026-10-01T10:00:00Z"
+        endTime:
+          type: string
+          format: date-time
+          description: Must be later than startTime.
+          example: "2026-10-01T11:00:00Z"
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, CANCELLED]
+          readOnly: true
+          example: CONFIRMED
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          minLength: 1
+          example: DOUBLE_BOOKING
+        message:
+          type: string
+          minLength: 1
+          example: Resource is already reserved for this time slot.

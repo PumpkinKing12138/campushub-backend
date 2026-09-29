@@ -1,10 +1,13 @@
 import express, { type Express } from "express";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { healthRouter } from "./routes/health.routes";
+import reservationRouter from "./routes/reservation.routes";
 
 export const app: Express = express();
 app.disable("x-powered-by");
+app.use(express.json());
 app.use("/api/v1", healthRouter);
+app.use("/api/v1", reservationRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
