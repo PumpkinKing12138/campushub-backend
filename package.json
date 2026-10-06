@@ -5,6 +5,7 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "node --env-file-if-exists=.env -r ts-node/register src/app.ts",
+    "seed": "node --env-file-if-exists=.env -r ts-node/register src/scripts/seed.ts",
     "build": "tsc",
     "start": "node --env-file-if-exists=.env dist/app.js",
     "typecheck": "tsc --noEmit",
@@ -27,7 +28,8 @@
     "typescript-eslint": "^8.70.1"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "mongoose": "^9.11.0"
   },
   "private": true,
   "engines": {

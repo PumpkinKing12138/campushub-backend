@@ -1,54 +1,10 @@
-import { randomUUID } from "node:crypto";
+import { Types } from "mongoose";
+import { ReservationModel } from "../models/Reservation.model";
+import { ResourceModel } from "../models/Resource.model";
 import type {
-  Resource,
-  Reservation,
   CreateReservationRequest,
+  Reservation,
 } from "../types/reservation";
-
-const resources: Resource[] = [
-  {
-    id: "res-101",
-    name: "Study Room 302",
-    type: "ROOM",
-    location: "Library, Floor 3",
-    isAvailable: true,
-  },
-  {
-    id: "res-102",
-    name: "3D Printer A",
-    type: "EQUIPMENT",
-    location: "Engineering Building, Floor 1",
-    isAvailable: true,
-  },
-  {
-    id: "res-103",
-    name: "Computer Lab",
-    type: "LAB",
-    location: "Science Building, Floor 2",
-    isAvailable: true,
-  },
-];
-
-export function listResources(type?: Resource["type"]): Resource[] {
-  return resources
-    .filter((resource: Resource): boolean => {
-      return type === undefined || resource.type === type;
-    })
-    .map((resource: Resource): Resource => ({ ...resource }));
-}
-
-const reservations: Reservation[] = [];
-
-export function listUserReservations(userId: string): Reservation[] {
-  return reservations
-    .filter((reservation: Reservation): boolean => {
-      return (
-        reservation.userId === userId &&
-        (reservation.status === "PENDING" || reservation.status === "CONFIRMED")
-      );
-    })
-    .map((reservation: Reservation): Reservation => ({ ...reservation }));
-}
 
 export class ReservationError extends Error {
   constructor(
@@ -60,54 +16,88 @@ export class ReservationError extends Error {
   }
 }
 
-export function createReservation(
+export async function listUserReservations(
+  userId: string,
+): Promise<Reservation[]> {
+  const records = await ReservationModel.find({
+    userId,
+    status: { $in: ["PENDING", "CONFIRMED"] },
+  })
+    .lean()
+    .exec();
+
+  return records.map((record): Reservation => ({
+    id: record._id.toString(),
+    resourceId: record.resourceId.toString(),
+    userId: record.userId,
+    startTime: record.startTime.toISOString(),
+    endTime: record.endTime.toISOString(),
+    status: record.status,
+  }));
+}
+
+export async function createReservation(
   input: CreateReservationRequest,
-): Reservation {
-  const resource = resources.find(
-    (item: Resource): boolean => item.id === input.resourceId,
-  );
+): Promise<Reservation> {
+  const startTime = new Date(input.startTime);
+  const endTime = new Date(input.endTime);
 
-  if (!resource || !resource.isAvailable) {
-    throw new ReservationError(
-      "VALIDATION_ERROR",
-      "Resource does not exist or is unavailable.",
-    );
-  }
-
-  const start = Date.parse(input.startTime);
-  const end = Date.parse(input.endTime);
-
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+  if (
+    Number.isNaN(startTime.getTime()) ||
+    Number.isNaN(endTime.getTime()) ||
+    endTime <= startTime
+  ) {
     throw new ReservationError(
       "VALIDATION_ERROR",
       "Times must be valid, and endTime must be after startTime.",
     );
   }
 
-  const hasConflict = reservations.some(
-    (item: Reservation): boolean =>
-      item.resourceId === input.resourceId &&
-      item.status !== "CANCELLED" &&
-      start < Date.parse(item.endTime) &&
-      end > Date.parse(item.startTime),
-  );
+  if (!Types.ObjectId.isValid(input.resourceId)) {
+    throw new ReservationError(
+      "VALIDATION_ERROR",
+      "Resource does not exist or is unavailable.",
+    );
+  }
 
-  if (hasConflict) {
+  const resourceId = new Types.ObjectId(input.resourceId);
+  const resource = await ResourceModel.findById(resourceId).lean().exec();
+
+  if (resource === null || !resource.isAvailable) {
+    throw new ReservationError(
+      "VALIDATION_ERROR",
+      "Resource does not exist or is unavailable.",
+    );
+  }
+
+  const conflictingReservation = await ReservationModel.exists({
+    resourceId,
+    status: { $ne: "CANCELLED" },
+    startTime: { $lt: endTime },
+    endTime: { $gt: startTime },
+  });
+
+  if (conflictingReservation !== null) {
     throw new ReservationError(
       "DOUBLE_BOOKING",
       "Resource is already reserved for this time slot.",
     );
   }
 
-  const reservation: Reservation = {
-    id: randomUUID(),
-    resourceId: input.resourceId,
+  const record = await ReservationModel.create({
+    resourceId,
     userId: input.userId,
-    startTime: input.startTime,
-    endTime: input.endTime,
+    startTime,
+    endTime,
     status: "CONFIRMED",
-  };
+  });
 
-  reservations.push(reservation);
-  return { ...reservation };
+  return {
+    id: record._id.toString(),
+    resourceId: record.resourceId.toString(),
+    userId: record.userId,
+    startTime: record.startTime.toISOString(),
+    endTime: record.endTime.toISOString(),
+    status: record.status,
+  };
 }

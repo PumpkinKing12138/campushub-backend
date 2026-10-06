@@ -1,44 +1,17 @@
 import type { NextFunction, Request, Response } from "express";
-import type {
-  ErrorResponse,
-  Reservation,
-  Resource,
-} from "../types/reservation";
+import type { ErrorResponse, Reservation } from "../types/reservation";
 import {
   createReservation,
-  listResources,
   listUserReservations,
   ReservationError,
 } from "../services/reservation.service";
 import { isValidReservationRequest } from "../middleware/reservation.validation";
 
-export function getResources(
-  request: Request,
-  response: Response<Resource[] | ErrorResponse>,
-): void {
-  const type = request.query.type;
-
-  if (
-    type !== undefined &&
-    type !== "ROOM" &&
-    type !== "EQUIPMENT" &&
-    type !== "LAB"
-  ) {
-    response.status(400).json({
-      code: "VALIDATION_ERROR",
-      message: "type must be ROOM, EQUIPMENT, or LAB when provided.",
-    });
-    return;
-  }
-
-  response.status(200).json(listResources(type));
-}
-
-export function postReservation(
+export async function postReservation(
   request: Request<Record<string, string>, unknown, unknown>,
   response: Response<Reservation | ErrorResponse>,
   next: NextFunction,
-): void {
+): Promise<void> {
   const body: unknown = request.body;
 
   if (!isValidReservationRequest(body)) {
@@ -51,7 +24,7 @@ export function postReservation(
   }
 
   try {
-    const reservation: Reservation = createReservation(body);
+    const reservation: Reservation = await createReservation(body);
     response.status(201).json(reservation);
   } catch (error: unknown) {
     if (error instanceof ReservationError) {
@@ -72,10 +45,11 @@ interface UserReservationParams {
   userId: string;
 }
 
-export function getUserReservations(
+export async function getUserReservations(
   request: Request<UserReservationParams, unknown, unknown>,
   response: Response<Reservation[] | ErrorResponse>,
-): void {
+  next: NextFunction,
+): Promise<void> {
   const userId = request.params.userId;
 
   if (typeof userId !== "string" || userId.trim().length === 0) {
@@ -86,5 +60,11 @@ export function getUserReservations(
     return;
   }
 
-  response.status(200).json(listUserReservations(userId));
+  try {
+    const reservations: Reservation[] = await listUserReservations(userId);
+
+    response.status(200).json(reservations);
+  } catch (error: unknown) {
+    next(error);
+  }
 }
