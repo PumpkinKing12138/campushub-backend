@@ -1,10 +1,23 @@
 import { ResourceModel } from "../models/Resource.model";
 import type { Resource } from "../types/reservation";
 
+export interface ResourceFilters {
+  type?: Resource["type"];
+  isAvailable?: boolean;
+}
+
 export async function listResources(
-  type?: Resource["type"],
+  filters: ResourceFilters = {},
 ): Promise<Resource[]> {
-  const filter = type === undefined ? {} : { type };
+  const filter: ResourceFilters = {};
+
+  if (filters.type !== undefined) {
+    filter.type = filters.type;
+  }
+
+  if (filters.isAvailable !== undefined) {
+    filter.isAvailable = filters.isAvailable;
+  }
 
   const records = await ResourceModel.find(filter).lean().exec();
 

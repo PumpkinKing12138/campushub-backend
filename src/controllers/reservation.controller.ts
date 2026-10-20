@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import type { ErrorResponse, Reservation } from "../types/reservation";
 import {
+  cancelReservation,
+  confirmReservation,
   createReservation,
   listUserReservations,
   ReservationError,
@@ -65,6 +67,70 @@ export async function getUserReservations(
 
     response.status(200).json(reservations);
   } catch (error: unknown) {
+    next(error);
+  }
+}
+
+interface ReservationParams {
+  id: string;
+}
+
+export async function patchCancelReservation(
+  request: Request<ReservationParams, unknown, unknown>,
+  response: Response<Reservation | ErrorResponse>,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const reservation = await cancelReservation(request.params.id);
+
+    if (reservation === null) {
+      response.status(404).json({
+        code: "NOT_FOUND",
+        message: "Reservation does not exist.",
+      });
+      return;
+    }
+
+    response.status(200).json(reservation);
+  } catch (error: unknown) {
+    if (error instanceof ReservationError) {
+      response.status(400).json({
+        code: error.code,
+        message: error.message,
+      });
+      return;
+    }
+
+    next(error);
+  }
+}
+
+export async function patchConfirmReservation(
+  request: Request<ReservationParams, unknown, unknown>,
+  response: Response<Reservation | ErrorResponse>,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const reservation = await confirmReservation(request.params.id);
+
+    if (reservation === null) {
+      response.status(404).json({
+        code: "NOT_FOUND",
+        message: "Reservation does not exist.",
+      });
+      return;
+    }
+
+    response.status(200).json(reservation);
+  } catch (error: unknown) {
+    if (error instanceof ReservationError) {
+      response.status(error.code === "INVALID_TRANSITION" ? 409 : 400).json({
+        code: error.code,
+        message: error.message,
+      });
+      return;
+    }
+
     next(error);
   }
 }

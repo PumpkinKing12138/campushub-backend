@@ -8,6 +8,7 @@ export async function getResources(
   next: NextFunction,
 ): Promise<void> {
   const type = request.query.type;
+  const availability = request.query.isAvailable;
 
   if (
     type !== undefined &&
@@ -22,8 +23,25 @@ export async function getResources(
     return;
   }
 
+  if (
+    availability !== undefined &&
+    availability !== "true" &&
+    availability !== "false"
+  ) {
+    response.status(400).json({
+      code: "VALIDATION_ERROR",
+      message: "isAvailable must be true or false when provided.",
+    });
+    return;
+  }
+
   try {
-    const resources: Resource[] = await listResources(type);
+    const resources: Resource[] = await listResources({
+      ...(type === undefined ? {} : { type }),
+      ...(availability === undefined
+        ? {}
+        : { isAvailable: availability === "true" }),
+    });
     response.status(200).json(resources);
   } catch (error: unknown) {
     next(error);

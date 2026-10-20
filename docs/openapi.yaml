@@ -20,9 +20,15 @@ paths:
           schema:
             type: string
             enum: [ROOM, EQUIPMENT, LAB]
+        - name: isAvailable
+          in: query
+          required: false
+          description: Filter resources by availability.
+          schema:
+            type: boolean
       responses:
         "200":
-          description: Resources matching the optional type filter.
+          description: Resources matching the optional type and availability filters.
           content:
             application/json:
               schema:
@@ -30,7 +36,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Resource"
         "400":
-          description: Invalid resource type.
+          description: Invalid resource type or availability filter.
           content:
             application/json:
               schema:
@@ -80,9 +86,9 @@ paths:
 
   /reservations/user/{userId}:
     get:
-      summary: List active reservations for a user
+      summary: List reservations for a user
       operationId: listUserReservations
-      description: Returns reservations with PENDING or CONFIRMED status.
+      description: Returns all reservations for the user, including cancelled ones.
       parameters:
         - name: userId
           in: path
@@ -92,7 +98,7 @@ paths:
             minLength: 1
       responses:
         "200":
-          description: Active reservations for the user, or an empty array.
+          description: Reservations for the user, or an empty array.
           content:
             application/json:
               schema:
@@ -101,6 +107,88 @@ paths:
                   $ref: "#/components/schemas/Reservation"
         "400":
           description: Invalid userId.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reservations/{id}/cancel:
+    patch:
+      summary: Cancel a reservation
+      operationId: cancelReservation
+      description: Sets the reservation status to CANCELLED and frees its time slot.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Reservation cancelled or already cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "400":
+          description: Invalid reservation ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Reservation not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reservations/{id}/confirm:
+    patch:
+      summary: Confirm a pending reservation
+      operationId: confirmReservation
+      description: Changes PENDING to CONFIRMED. Repeating a confirmation succeeds; a cancelled reservation cannot be confirmed.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Reservation confirmed or already confirmed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "400":
+          description: Invalid reservation ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Reservation not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Cancelled reservations cannot be confirmed.
           content:
             application/json:
               schema:

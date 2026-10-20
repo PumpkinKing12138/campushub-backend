@@ -8,7 +8,8 @@ import type {
 
 export class ReservationError extends Error {
   constructor(
-    public readonly code: "VALIDATION_ERROR" | "DOUBLE_BOOKING",
+    public readonly code:
+      "VALIDATION_ERROR" | "DOUBLE_BOOKING" | "INVALID_TRANSITION",
     message: string,
   ) {
     super(message);
@@ -19,12 +20,7 @@ export class ReservationError extends Error {
 export async function listUserReservations(
   userId: string,
 ): Promise<Reservation[]> {
-  const records = await ReservationModel.find({
-    userId,
-    status: { $in: ["PENDING", "CONFIRMED"] },
-  })
-    .lean()
-    .exec();
+  const records = await ReservationModel.find({ userId }).lean().exec();
 
   return records.map((record): Reservation => ({
     id: record._id.toString(),
@@ -72,7 +68,7 @@ export async function createReservation(
 
   const conflictingReservation = await ReservationModel.exists({
     resourceId,
-    status: { $ne: "CANCELLED" },
+    status: { $in: ["PENDING", "CONFIRMED"] },
     startTime: { $lt: endTime },
     endTime: { $gt: startTime },
   });
@@ -91,6 +87,79 @@ export async function createReservation(
     endTime,
     status: "CONFIRMED",
   });
+
+  return {
+    id: record._id.toString(),
+    resourceId: record.resourceId.toString(),
+    userId: record.userId,
+    startTime: record.startTime.toISOString(),
+    endTime: record.endTime.toISOString(),
+    status: record.status,
+  };
+}
+
+export async function cancelReservation(
+  id: string,
+): Promise<Reservation | null> {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new ReservationError(
+      "VALIDATION_ERROR",
+      "id must be a valid reservation ID.",
+    );
+  }
+
+  const record = await ReservationModel.findByIdAndUpdate(
+    id,
+    { $set: { status: "CANCELLED" } },
+    { returnDocument: "after", runValidators: true },
+  )
+    .lean()
+    .exec();
+
+  if (record === null) {
+    return null;
+  }
+
+  return {
+    id: record._id.toString(),
+    resourceId: record.resourceId.toString(),
+    userId: record.userId,
+    startTime: record.startTime.toISOString(),
+    endTime: record.endTime.toISOString(),
+    status: record.status,
+  };
+}
+
+export async function confirmReservation(
+  id: string,
+): Promise<Reservation | null> {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new ReservationError(
+      "VALIDATION_ERROR",
+      "id must be a valid reservation ID.",
+    );
+  }
+
+  const updated = await ReservationModel.findOneAndUpdate(
+    { _id: id, status: "PENDING" },
+    { $set: { status: "CONFIRMED" } },
+    { returnDocument: "after", runValidators: true },
+  )
+    .lean()
+    .exec();
+
+  const record = updated ?? (await ReservationModel.findById(id).lean().exec());
+
+  if (record === null) {
+    return null;
+  }
+
+  if (record.status === "CANCELLED") {
+    throw new ReservationError(
+      "INVALID_TRANSITION",
+      "Cancelled reservations cannot be confirmed.",
+    );
+  }
 
   return {
     id: record._id.toString(),
