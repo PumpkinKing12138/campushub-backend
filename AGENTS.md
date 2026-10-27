@@ -50,3 +50,23 @@
 - Report checks actually run and their results.
   Explicitly state when a check has not been run.
 - Do not weaken these rules just to make generated code pass.
+
+## 5. Frontend Guidelines (Lab 5)
+
+- Keep the React, TypeScript, and Vite frontend in client/.
+- Frontend application source files must use .ts or .tsx.
+- Use functional components with explicit, named prop interfaces.
+- Use React hooks or custom hooks for state and asynchronous workflows.
+- Keep API requests in client/src/api/campushubApi.ts.
+- Never place API calls directly inside JSX.
+- Match request and response types to docs/openapi.yaml.
+- Use the native Fetch API for HTTP requests.
+- Use CSS Modules for modular and consistent component styling.
+- Handle loading, success, empty, and error states explicitly.
+- Display a clear error message for HTTP 409 reservation conflicts.
+- Validate required fields and ensure endTime is after startTime.
+- Refresh user reservations after successful booking or cancellation.
+- Keep all code, comments, UI text, and documentation in English.
+- React, React DOM, Vite, and the development dependencies generated
+  by the React TypeScript scaffold are approved for client/.
+- The backend dependency restrictions remain applicable to the backend.

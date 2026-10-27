@@ -1,0 +1,39 @@
+.panel {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+}
+
+.list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.booking {
+  padding: 1rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+
+.booking h3 {
+  margin-top: 0;
+}
+
+.error {
+  padding: 1rem;
+  color: #991b1b;
+  background: #fef2f2;
+  border-radius: 8px;
+}
+
+.success {
+  padding: 1rem;
+  color: #166534;
+  background: #f0fdf4;
+  border-radius: 8px;
+}
