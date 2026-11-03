@@ -1,103 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
-import {
-  cancelReservation,
-  fetchUserReservations,
-  type Reservation,
-} from '../api/campushubApi'
+import type { Reservation } from '../api/campushubApi'
+import type { ReservationListState } from '../hooks/useReservations'
 import styles from './UserReservations.module.css'
 
-interface UserReservationsProps {
+interface UserReservationsProps extends ReservationListState {
   userId: string
 }
 
 export default function UserReservations({
-  userId,
+  userId, reservations, isLoading, cancellingId, error, success, refresh, handleCancel,
 }: UserReservationsProps): ReactElement {
-  const [reservations, setReservations] = useState<Reservation[]>([])
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [cancellingId, setCancellingId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [refreshCount, setRefreshCount] = useState<number>(0)
-  const cancellingRef = useRef<boolean>(false)
-
-  useEffect(() => {
-    let active = true
-
-    fetchUserReservations(userId)
-      .then((data: Reservation[]): void => {
-        if (active) {
-          setReservations(data)
-        }
-      })
-      .catch((cause: unknown): void => {
-        if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : 'Unable to load reservations.',
-          )
-        }
-      })
-      .finally((): void => {
-        if (active) {
-          setIsLoading(false)
-        }
-      })
-
-    return (): void => {
-      active = false
-    }
-  }, [userId, refreshCount])
-
-  function refresh(): void {
-    setError(null)
-    setSuccess(null)
-    setIsLoading(true)
-    setRefreshCount((count: number): number => count + 1)
-  }
-
-  async function handleCancel(reservationId: string): Promise<void> {
-    if (cancellingRef.current) {
-      return
-    }
-
-    cancellingRef.current = true
-    setCancellingId(reservationId)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const updated = await cancelReservation(reservationId)
-
-      setReservations((current: Reservation[]): Reservation[] =>
-        current.map((reservation: Reservation): Reservation =>
-          reservation.id === updated.id ? updated : reservation,
-        ),
-      )
-      setSuccess('Reservation cancelled successfully.')
-
-      try {
-        const latest = await fetchUserReservations(userId)
-        setReservations(latest)
-      } catch {
-        setError(
-          'The reservation was cancelled, but the list could not be refreshed. Please refresh the list.',
-        )
-      }
-    } catch (cause: unknown) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : 'Unable to cancel the reservation.',
-      )
-    } finally {
-      cancellingRef.current = false
-      setCancellingId(null)
-    }
-  }
-
   const activeReservations = reservations.filter(
     (reservation: Reservation): boolean =>
       reservation.status !== 'CANCELLED',

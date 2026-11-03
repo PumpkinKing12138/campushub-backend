@@ -1,6 +1,8 @@
 import { Schema, model } from "mongoose";
 
-export type ResourceType = "ROOM" | "EQUIPMENT" | "LAB";
+import type { ResourceType } from "../types/reservation";
+
+export type { ResourceType };
 
 export interface ResourceRecord {
   name: string;

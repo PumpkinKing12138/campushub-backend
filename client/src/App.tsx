@@ -5,15 +5,13 @@ import BookingForm from './components/BookingForm'
 import ResourceList from './components/ResourceList'
 import UserReservations from './components/UserReservations'
 
+import { useReservations } from './hooks/useReservations'
+
 const CURRENT_USER_ID = 'user-456'
 
 export default function App(): ReactElement {
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
-  const [bookingsVersion, setBookingsVersion] = useState<number>(0)
-
-  function handleBookingCreated(): void {
-    setBookingsVersion((version: number): number => version + 1)
-  }
+  const { book, isSubmitting, list } = useReservations(CURRENT_USER_ID)
 
   return (
     <main>
@@ -30,12 +28,13 @@ export default function App(): ReactElement {
           key={selectedResource.id}
           resource={selectedResource}
           userId={CURRENT_USER_ID}
-          onBookingCreated={handleBookingCreated}
+          book={book}
+          isSubmitting={isSubmitting}
         />
       )}
 
       <UserReservations
-        key={bookingsVersion}
+        {...list}
         userId={CURRENT_USER_ID}
       />
     </main>

@@ -1,6 +1,6 @@
-# CampusHub Backend — Agent Instructions
+# CampusHub Agent Instructions
 
-## 1. Tech Stack and Dependencies
+## 1. Backend Tech Stack and Dependencies
 
 - Use Node.js, TypeScript, Express, MongoDB, and Mongoose.
 - Write application source code in TypeScript (.ts); do not create
@@ -51,7 +51,7 @@
   Explicitly state when a check has not been run.
 - Do not weaken these rules just to make generated code pass.
 
-## 5. Frontend Guidelines (Lab 5)
+## 5. Frontend Guidelines
 
 - Keep the React, TypeScript, and Vite frontend in client/.
 - Frontend application source files must use .ts or .tsx.
@@ -68,5 +68,4 @@
 - Refresh user reservations after successful booking or cancellation.
 - Keep all code, comments, UI text, and documentation in English.
 - React, React DOM, Vite, and the development dependencies generated
-  by the React TypeScript scaffold are approved for client/.
-- The backend dependency restrictions remain applicable to the backend.
+  by the React TypeScript scaffold are approved for client/.  

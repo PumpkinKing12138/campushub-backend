@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { connectToDatabase } from "./config/database";
 import { loadConfig } from "./config/environment";
-import { errorHandler, notFoundHandler } from "./middleware/error-handler";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { healthRouter } from "./routes/health.routes";
 import reservationRouter from "./routes/reservation.routes";
 import resourceRouter from "./routes/resource.routes";

@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { ReservationError } from "../services/reservation.service";
 import type { ErrorResponse } from "../types/reservation";
 
 export function errorHandler(
@@ -21,6 +22,11 @@ export function errorHandler(
       code: "VALIDATION_ERROR",
       message: "Request body must contain valid JSON.",
     });
+    return;
+  }
+  if (error instanceof ReservationError) {
+    const status = error.code === "VALIDATION_ERROR" ? 400 : 409;
+    response.status(status).json({ code: error.code, message: error.message });
     return;
   }
   console.error("Request failed:", error);

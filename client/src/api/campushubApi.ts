@@ -1,31 +1,13 @@
-export type ResourceType = 'ROOM' | 'EQUIPMENT' | 'LAB'
+import type {
+  CreateReservationRequest,
+  ErrorResponse,
+  Reservation,
+  Resource,
+  ResourceType,
+} from '../../../shared/campushub'
 
-export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED'
-
-export interface Resource {
-  id: string
-  name: string
-  type: ResourceType
-  location: string
-  isAvailable: boolean
-}
-
-export interface CreateReservationDTO {
-  resourceId: string
-  userId: string
-  startTime: string
-  endTime: string
-}
-
-export interface Reservation extends CreateReservationDTO {
-  id: string
-  status: ReservationStatus
-}
-
-export interface ErrorResponse {
-  code: string
-  message: string
-}
+export type * from '../../../shared/campushub'
+export type CreateReservationDTO = CreateReservationRequest
 
 export class ApiError extends Error {
   readonly status: number

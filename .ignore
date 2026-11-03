@@ -1,0 +1,18 @@
+# Dependencies and lockfiles
+**/node_modules/
+**/package-lock.json
+
+# Build output, coverage reports, and generated source maps
+**/dist/
+**/build/
+**/coverage/
+*.map
+
+# Historical logs
+**/logs/
+*.log
+
+# Local environment settings
+.env
+.env.*
+!.env-example

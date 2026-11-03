@@ -1,9 +1,8 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent, ReactElement } from 'react'
 import {
   ApiError,
-  createReservation,
-  type Reservation,
+  type CreateReservationDTO,
   type Resource,
 } from '../api/campushubApi'
 import styles from './BookingForm.module.css'
@@ -11,27 +10,27 @@ import styles from './BookingForm.module.css'
 interface BookingFormProps {
   resource: Resource
   userId: string
-  onBookingCreated: (reservation: Reservation) => void
+  book: (input: CreateReservationDTO) => Promise<boolean>
+  isSubmitting: boolean
 }
 
 export default function BookingForm({
   resource,
   userId,
-  onBookingCreated,
+  book,
+  isSubmitting,
 }: BookingFormProps): ReactElement {
   const [startTime, setStartTime] = useState<string>('')
   const [endTime, setEndTime] = useState<string>('')
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const submittingRef = useRef<boolean>(false)
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
     event.preventDefault()
 
-    if (submittingRef.current) {
+    if (isSubmitting) {
       return
     }
 
@@ -55,19 +54,15 @@ export default function BookingForm({
       return
     }
 
-    submittingRef.current = true
-    setIsSubmitting(true)
-
     try {
-      const reservation = await createReservation({
+      const created = await book({
         resourceId: resource.id,
         userId: userId.trim(),
         startTime: start.toISOString(),
         endTime: end.toISOString(),
       })
 
-      setSuccess('Reservation created successfully.')
-      onBookingCreated(reservation)
+      if (created) setSuccess('Reservation created successfully.')
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 409) {
         setError(
@@ -80,9 +75,6 @@ export default function BookingForm({
             : 'Unable to create the reservation.',
         )
       }
-    } finally {
-      submittingRef.current = false
-      setIsSubmitting(false)
     }
   }
 
