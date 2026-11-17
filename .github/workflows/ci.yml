@@ -14,10 +14,15 @@ jobs:
     name: Lint and Jest tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      test_outcome: ${{ steps.jest.outcome }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -31,6 +36,132 @@ jobs:
       - name: Run lint
         run: npm run lint
 
-      - name: Run Jest tests
-        run: npm test -- --runInBand
-        
+      - name: Check TypeScript
+        run: npm run typecheck
+
+      - name: Run Jest tests and capture output
+        id: jest
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test -- --runInBand 2>&1 | tee test-results.log
+
+      - name: Upload Jest log
+        if: ${{ always() && steps.jest.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: jest-results
+          path: test-results.log
+          if-no-files-found: error
+          retention-days: 14
+
+  auto-fix:
+    name: AI repair and verification
+    needs: test
+    if: >-
+      ${{
+        failure() &&
+        needs.test.outputs.test_outcome == 'failure' &&
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.head.ref == 'test/breaking-reservation-change' &&
+        github.actor == github.repository_owner
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: auto-heal-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout failing revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.21.0"
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download failing Jest log
+        uses: actions/download-artifact@v8
+        with:
+          name: jest-results
+          path: .
+
+      - name: Generate AI repair
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node -r ts-node/register src/scripts/auto-fix.ts
+
+      - name: Check patch formatting
+        run: git diff --check
+
+      - name: Verify lint after repair
+        run: npm run lint
+
+      - name: Verify TypeScript after repair
+        run: npm run typecheck
+
+      - name: Verify all tests after repair
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test -- --runInBand 2>&1 | tee verification-results.log
+
+      - name: Ensure only the service file changed
+        shell: bash
+        run: |
+          git diff --exit-code -- . \
+            ':(exclude)src/services/reservation.service.ts'
+
+      - name: Upload verification log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: auto-heal-verification
+          path: verification-results.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Open repair pull request
+        id: repair_pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ github.event.pull_request.head.ref }}
+          branch: fix/auto-heal-${{ github.event.pull_request.number }}
+          add-paths: src/services/reservation.service.ts
+          commit-message: "fix: auto-heal reservation service"
+          title: "fix: AI repair for reservation test failure"
+          body: |
+            ## Automated repair
+            This patch was generated from the failing Jest log and
+            reservation source/test context using the OpenAI API.
+
+            Original PR: #${{ github.event.pull_request.number }}
+            Failing revision: ${{ github.event.pull_request.head.sha }}
+            Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            ## Automated verification
+            - ESLint passed after the repair.
+            - TypeScript checking passed after the repair.
+            - The full Jest suite passed after the repair.
+            - Only reservation.service.ts is included in this patch.
+
+            ## Human review audit
+            Review pending. Complete this section after inspecting the diff.
+            - [ ] Confirm the patch fixes the booking logic.
+            - [ ] Confirm no tests or assertions were weakened.
+            - [ ] Review the successful verification log.
+            - [ ] Record the reviewer and review outcome.
