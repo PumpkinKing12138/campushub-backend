@@ -73,7 +73,7 @@ export async function createReservation(
     endTime: { $gt: startTime },
   });
 
-  if (conflictingReservation === null) {
+  if (conflictingReservation !== null) {
     throw new ReservationError(
       "DOUBLE_BOOKING",
       "Resource is already reserved for this time slot.",
