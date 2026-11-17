@@ -117,8 +117,10 @@ test("PATCH cancel returns 200 and the cancelled reservation", async () => {
     })
     .expect(201);
 
+  const createdBody = created.body as { id: string };
+
   const response = await request(app)
-    .patch(`/api/v1/reservations/${created.body.id}/cancel`)
+    .patch(`/api/v1/reservations/${createdBody.id}/cancel`)
     .expect(200);
 
   expect(response.body).toEqual({ ...created.body, status: "CANCELLED" });
